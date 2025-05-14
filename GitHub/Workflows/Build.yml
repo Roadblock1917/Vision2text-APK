@@ -1,0 +1,21 @@
+name: Build APK
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+    - name: Install Buildozer
+      run: pip install buildozer
+    - name: Build APK
+      run: |
+        buildozer android debug
+        mkdir -p apk
+        cp bin/*.apk apk/
+    - name: Upload APK
+      uses: actions/upload-artifact@v2
+      with:
+        name: vision2text-apk
+        path: apk
