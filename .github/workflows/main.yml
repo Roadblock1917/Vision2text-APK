@@ -2,29 +2,52 @@ name: Build APK
 on: [push]
 
 permissions:
-  actions: write  # Required for artifact uploads
+  actions: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
-      - name: Install dependencies
+          
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-pip openjdk-17-jdk
-          pip install buildozer
-      - name: Build APK
+          sudo apt-get install -y \
+            python3-pip \
+            openjdk-17-jdk \
+            zlib1g-dev \
+            libncurses5-dev \
+            libffi-dev \
+            libssl-dev
+          
+      - name: Install Python dependencies
         run: |
-          buildozer android debug
-          mkdir -p apk
-          cp bin/*.apk apk/
+          python -m pip install --upgrade pip
+          pip install buildozer cython virtualenv
+          
+      - name: Build APK (with debug output)
+        run: |
+          buildozer init
+          buildozer -v android debug 2>&1 | tee build.log
+          ls -la bin/ || true
+          
       - name: Upload APK
+        if: success() && contains(fromJson('["debug","release"]'), 'debug')
         uses: actions/upload-artifact@v4
         with:
           name: vision2text-apk
-          path: apk/*.apk
+          path: bin/*.apk
+          
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
